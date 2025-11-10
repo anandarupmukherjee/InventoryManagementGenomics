@@ -13,3 +13,7 @@ It can be accessed at `localhost:8000/admin` or is linked from the `Stock Manage
 Log in with:  
 - username: `admin`
 - password: `shoestring`  
+
+The Docker entrypoint automatically creates this superuser on startup.  
+Override the credentials by setting `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_PASSWORD`,  
+and `DJANGO_SUPERUSER_EMAIL` in `docker-compose.yml` (or via your environment) before running `start.sh`.
