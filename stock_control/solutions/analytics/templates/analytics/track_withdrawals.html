@@ -17,11 +17,14 @@
 
 
   <!-- Page Container -->
-  <div class="dashboard-container">
+    <div class="dashboard-container">
 
     <!-- Withdrawal Records Card -->
     <div class="card table-card">
       <h2>Withdrawal Records</h2>
+      {% if staff_only %}
+        <p class="info-text">Showing withdrawals recorded under your login.</p>
+      {% endif %}
 
       <!-- Search Bar -->
       <input type="text" id="searchWithdrawal" class="search-bar" placeholder="Search by product, code, or user">

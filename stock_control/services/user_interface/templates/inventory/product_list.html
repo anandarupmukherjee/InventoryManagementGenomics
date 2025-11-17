@@ -22,7 +22,30 @@
 
         <!-- Product List Card -->
         <div class="card table-card">
-            <h1>All Products</h1>
+            <div class="card-header flex-between">
+                <h1>All Products</h1>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <form method="get" class="inline-form">
+                        {% for value, label in filter_options %}
+                            <label class="radio-inline">
+                                <input type="radio" name="filter" value="{{ value }}" {% if value == filter_key %}checked{% endif %} onchange="this.form.submit()">
+                                {{ label }}
+                            </label>
+                        {% endfor %}
+                    </form>
+                    <form method="get" class="inline-form">
+                        <input
+                            type="text"
+                            name="barcode"
+                            value="{{ barcode_value }}"
+                            placeholder="Scan or enter product barcode"
+                            autocomplete="off"
+                        >
+                        <input type="hidden" name="filter" value="{{ filter_key }}">
+                        <button type="submit" class="btn btn-primary">Lookup</button>
+                    </form>
+                </div>
+            </div>
 
             <!-- Search Bar -->
             <!-- Search Bar for Product List -->
@@ -35,12 +58,15 @@
                         <tr>
                             <th>Product Name</th>
                             <th>Product Code</th>
-                            <th>Current Stock</th>
-                            <th>Full Items in Stock</th> <!-- ✅ NEW COLUMN -->
-                            <th>Remaining Parts</th>     <!-- ✅ NEW COLUMN -->
+                            <th>Total Stock</th>
+                            <th>Full Items in Stock</th>
+                            <th>Remaining Parts</th>
                             <th>Stock Threshold</th>
                             <th>Order Lead Times</th>
                             <th>Supplier</th>
+                            {% if location_tracking_enabled %}
+                            <th>Locations</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -48,12 +74,25 @@
                             <tr>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.product_code }}</td>
-                                <td>{{ product.get_full_items_in_stock }}</td> <!-- ✅ Replace current_stock -->
+                                <td>{{ product.total_stock }}</td>
                                 <td>{{ product.full_items }}</td>
                                 <td>{{ product.remaining_parts }}</td>
                                 <td>{{ product.threshold }}</td>
                                 <td>{{ product.lead_time }}</td>
-                                <td>{{ product.supplier }}</td>
+                                <td>{{ product.supplier_display }}</td>
+                                {% if location_tracking_enabled %}
+                                <td>
+                                    {% if product.location_stocks %}
+                                        <ul class="inline-list">
+                                            {% for stock in product.location_stocks %}
+                                                <li>{{ stock.location.name }} ({{ stock.quantity }})</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                {% endif %}
                             </tr>
                         {% empty %}
                             <tr>

@@ -15,6 +15,15 @@ class Supplier(models.Model):
         return self.name
 
 
+class Location(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     SUPPLIER_CHOICES = [
         ('LEICA', 'Leica'),
@@ -23,6 +32,20 @@ class Product(models.Model):
     product_code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
     supplier = models.CharField(max_length=20, choices=SUPPLIER_CHOICES, default='LEICA')
+    supplier_ref = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
     threshold = models.PositiveIntegerField()
     lead_time = models.DurationField(default=timedelta(days=1), help_text="Lead time (e.g., 1 day, 2 hours)")
 
@@ -34,6 +57,12 @@ class Product(models.Model):
 
     def get_remaining_parts(self):
         return sum(item.accumulated_partial for item in self.items.all())
+
+    @property
+    def supplier_display(self):
+        if self.supplier_ref:
+            return self.supplier_ref.name
+        return self.get_supplier_display()
 
 
 class ProductItem(models.Model):

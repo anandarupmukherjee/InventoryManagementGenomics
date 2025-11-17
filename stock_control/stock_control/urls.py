@@ -1,29 +1,48 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+
 from .module_loader import load_enabled_modules
 
-enabled = load_enabled_modules()
+modules = load_enabled_modules()
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("inventory.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
-    path('data2/', include('services.data_collection_2.urls', namespace='data_collection_2')),
-    path('data3/', include('services.data_collection_3.urls', namespace='data_collection_3')),
+    path("data/", include(("services.data_collection.urls", "data"), namespace="data")),
+    path("data2/", include("services.data_collection_2.urls", namespace="data_collection_2")),
+    path("data3/", include("services.data_collection_3.urls", namespace="data_collection_3")),
+    path("stock/", include(("services.data_collection_1.urls", "data_collection_1"), namespace="data_collection_1")),
 ]
 
-if "enable_analysis" in enabled:
-    from services.analysis import urls as analysis_urls
-    urlpatterns.append(path("analysis/", include((analysis_urls, "analysis"))))
+if modules.get("purchase_orders", {}).get("enabled"):
+    urlpatterns.append(
+        path(
+            "purchase-orders/",
+            include(("solutions.purchase_orders.urls", "purchase_orders"), namespace="purchase_orders"),
+        )
+    )
 
-if "enable_data_collection" in enabled:
-    from services.data_collection import urls as data_urls
-    urlpatterns.append(path("data/", include((data_urls, "data"), namespace='data')))
+if modules.get("quality_control", {}).get("enabled"):
+    urlpatterns.append(
+        path(
+            "quality-control/",
+            include(("solutions.quality_control.urls", "quality_control"), namespace="quality_control"),
+        )
+    )
 
-if "enable_reporting" in enabled:
-    from services.reporting import urls as reporting_urls
-    urlpatterns.append(path("reporting/", include((reporting_urls, "reporting"))))
+if modules.get("analytics", {}).get("enabled"):
+    urlpatterns.append(
+        path(
+            "analytics/",
+            include(("solutions.analytics.urls", "analytics"), namespace="analytics"),
+        )
+    )
 
-if "enable_stock_admin" in enabled:
-    from services.data_collection_1 import urls as stock_admin_urls
-    urlpatterns.append(path("stock/", include((stock_admin_urls, 'data_collection_1'))))
+if modules.get("location_tracking", {}).get("enabled"):
+    urlpatterns.append(
+        path(
+            "location-tracking/",
+            include(("solutions.location_tracking.urls", "location_tracking"), namespace="location_tracking"),
+        )
+    )

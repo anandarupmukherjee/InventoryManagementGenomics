@@ -31,10 +31,6 @@ urlpatterns = [
 
     
     # Tracking & Purchase Orders
-    path('track_withdrawals/', views.track_withdrawals, name='track_withdrawals'),
-    path('record_purchase_order/', views.record_purchase_order, name='record_purchase_order'),
-    path('track_purchase_orders/', views.track_purchase_orders, name='track_purchase_orders'),
-    path('mark_order_delivered/<int:order_id>/', views.mark_order_delivered, name='mark_order_delivered'),
     # path('complete_purchase_order/', views.complete_purchase_order, name='complete_purchase_order'),
 
 
@@ -52,6 +48,12 @@ urlpatterns = [
     path('register_user/', views.register_user, name='register_user'),
     path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('delete_user/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('manage_suppliers/', views.manage_suppliers, name='manage_suppliers'),
+    path('suppliers/<int:supplier_id>/products/', views.supplier_products, name='supplier_products'),
+    path('manage_locations/', views.manage_locations, name='manage_locations'),
+    path('locations/<int:location_id>/products/', views.location_products, name='location_products'),
+    path('manage_product_codes/', views.manage_product_codes, name='manage_product_codes'),
+    path('help/', views.help_page, name='help'),
 
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('login/', auth_views.LoginView.as_view(), name='login'),

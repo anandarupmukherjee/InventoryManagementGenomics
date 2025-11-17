@@ -2,7 +2,20 @@ import re
 from django.http import JsonResponse
 from services.data_storage.models import Product, ProductItem
 
-# 🔧 Utility function to format GS1 expiry date
+AI_TERMINATORS = {"\x1d", "\x1e", "\x1f"}
+
+
+def _blank_result():
+    return {
+        "product_code": "",
+        "normalized_product_code": "",
+        "raw_product_code": "",
+        "lot_number": "",
+        "expiry_date": "",
+        "format": None,
+    }
+
+
 def _format_gs1_date(raw_date):
     try:
         yy, mm, dd = raw_date[:2], raw_date[2:4], raw_date[4:6]
@@ -10,21 +23,58 @@ def _format_gs1_date(raw_date):
     except Exception:
         return ""
 
-# 🔍 Reusable parser that works independently of Django
+
+def _store_codes(result, code):
+    if not code:
+        return
+    result["raw_product_code"] = code
+    normalized = code.lstrip("0")
+    result["product_code"] = code
+    result["normalized_product_code"] = normalized if normalized else code
+
+
+def _clean_payload(raw):
+    if not raw:
+        return ""
+    cleaned = raw.strip()
+    for ch in ("\r", "\n"):
+        cleaned = cleaned.replace(ch, "")
+    cleaned = cleaned.strip("".join(AI_TERMINATORS))
+    if cleaned.startswith("]") and len(cleaned) >= 3:
+        cleaned = cleaned[3:]
+    return cleaned
+
+
+def _skip_ai_separators(payload, index):
+    while index < len(payload) and payload[index] in AI_TERMINATORS:
+        index += 1
+    return index
+
+
+def _extract_ai_value(payload, start_index):
+    end = len(payload)
+    for idx in range(start_index, len(payload)):
+        if payload[idx] in AI_TERMINATORS:
+            end = idx
+            break
+    value = payload[start_index:end]
+    next_index = end + 1 if end < len(payload) and payload[end] in AI_TERMINATORS else end
+    return value, next_index
+
+
 def parse_barcode_data(raw):
-    result = {
-        "product_code": "",
-        "lot_number": "",
-        "expiry_date": "",
-        "format": None
-    }
+    payload = _clean_payload(raw)
+    if not payload:
+        return None
+
+    result = _blank_result()
 
     # Case 1: 3PR barcode
-    if "**" in raw and "3PR" in raw:
+    if "**" in payload and "3PR" in payload:
         try:
-            parts = raw.split("**")
+            parts = payload.split("**")
             product_code = re.search(r"3PR\d+", parts[0])
-            result["product_code"] = product_code.group(0) if product_code else ""
+            _store_codes(result, product_code.group(0) if product_code else "")
             result["lot_number"] = parts[1] if len(parts) > 1 else ""
             result["expiry_date"] = parts[2] if len(parts) > 2 else ""
             result["format"] = "3PR"
@@ -34,35 +84,54 @@ def parse_barcode_data(raw):
 
     # Case 2: Bracketed GS1
     try:
-        product_code = re.search(r"\(01\)(\d{14})", raw)
-        expiry = re.search(r"\(17\)(\d{6})", raw)
-        lot = re.search(r"\(10\)([^\(]+)", raw)
+        product_code = re.search(r"\(01\)(\d{14})", payload)
+        expiry = re.search(r"\(17\)(\d{6})", payload)
+        lot = re.search(r"\(10\)([^\(]+)", payload)
 
         if product_code:
-            result["product_code"] = product_code.group(1)
+            _store_codes(result, product_code.group(1))
         if expiry:
             result["expiry_date"] = _format_gs1_date(expiry.group(1))
         if lot:
-            result["lot_number"] = lot.group(1)
+            lot_value = lot.group(1)
+            lot_value = lot_value.split("\x1d", 1)[0]
+            result["lot_number"] = lot_value
         result["format"] = "GS1"
-        return result if product_code else None
+        if product_code:
+            return result
     except Exception:
         pass
 
-    # Case 3: Flattened GS1
+    # Case 3: Flattened GS1 (strict)
     try:
-        if raw.startswith("01") and len(raw) > 16:
-            result["product_code"] = raw[2:16]
+        if payload.startswith("01") and len(payload) > 16:
+            _store_codes(result, payload[2:16])
             i = 16
 
-            if raw[i:i+2] == "17":
-                expiry_raw = raw[i+2:i+8]
+            if payload[i:i+2] == "17":
+                expiry_raw = payload[i+2:i+8]
                 result["expiry_date"] = _format_gs1_date(expiry_raw)
                 i += 8
 
-            if raw[i:i+2] == "10":
-                result["lot_number"] = raw[i+2:]
+            i = _skip_ai_separators(payload, i)
 
+            if payload[i:i+2] == "10":
+                lot_value, next_index = _extract_ai_value(payload, i + 2)
+                result["lot_number"] = lot_value
+                i = next_index
+
+            result["format"] = "GS1_flat"
+            return result
+    except Exception:
+        pass
+
+    # Case 4: Flattened GS1 (search pattern anywhere)
+    try:
+        match = re.search(r"01(\d{14})17(\d{6})10([^\x1d\x1e\x1f]*)", payload)
+        if match:
+            _store_codes(result, match.group(1))
+            result["expiry_date"] = _format_gs1_date(match.group(2))
+            result["lot_number"] = match.group(3)
             result["format"] = "GS1_flat"
             return result
     except Exception:
@@ -70,7 +139,7 @@ def parse_barcode_data(raw):
 
     return None
 
-# 🌐 Django endpoint to use parse_barcode_data
+
 def parse_barcode(request):
     raw = request.GET.get("raw", "")
     result = parse_barcode_data(raw)
@@ -78,7 +147,7 @@ def parse_barcode(request):
         return JsonResponse(result)
     return JsonResponse({"error": "Unrecognized barcode format"}, status=400)
 
-# 🌐 Lookup by scanned barcode
+
 def get_product_by_barcode(request):
     barcode = request.GET.get("barcode", "")
     if not barcode:
@@ -110,7 +179,7 @@ def get_product_by_barcode(request):
 
     return JsonResponse({"error": "Product not found"}, status=404)
 
-# 🌐 Lookup by product ID
+
 def get_product_by_id(request):
     product_id = request.GET.get("id", "")
     if not product_id.isdigit():

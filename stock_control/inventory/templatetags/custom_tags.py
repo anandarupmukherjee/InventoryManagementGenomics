@@ -7,3 +7,11 @@ def attr(obj, attr_name):
         return getattr(obj, attr_name)
     except AttributeError:
         return ''
+
+
+@register.filter
+def get_item(mapping, key):
+    try:
+        return mapping.get(key)
+    except AttributeError:
+        return None

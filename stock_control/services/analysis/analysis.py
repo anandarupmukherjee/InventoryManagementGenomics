@@ -6,7 +6,8 @@ from django.shortcuts import render
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 import datetime
 from django.db.models import Count, Sum
-from services.data_storage.models import Product, ProductItem, Withdrawal, PurchaseOrder
+from django.db.models.functions import Coalesce
+from services.data_storage.models import Product, ProductItem, Withdrawal, PurchaseOrder, Supplier, Location
 
 def get_dashboard_data():
     # 1. Stock Level Status
@@ -14,15 +15,39 @@ def get_dashboard_data():
     stock_labels = []
     stock_values = []
     threshold_values = []
+    stock_names = []
     for product in products:
-        stock_labels.append(product.name)
-        stock_values.append(product.get_full_items_in_stock())
-        threshold_values.append(product.threshold)
+        total_stock = float(product.get_full_items_in_stock())
+        # Only include products with stock > 0 and either below threshold or at least 2 above
+        if total_stock <= 0:
+            continue
+        threshold = product.threshold
+        if total_stock < threshold or total_stock >= (threshold + 2):
+            stock_labels.append(product.product_code)
+            stock_values.append(total_stock)
+            threshold_values.append(threshold)
+            stock_names.append(product.name)
 
     # 2. Stock Distribution by Supplier
-    supplier_data = Product.objects.values('supplier').annotate(count=Count('id'))
-    supplier_labels = [item['supplier'] for item in supplier_data]
-    supplier_values = [item['count'] for item in supplier_data]
+    supplier_choice_map = dict(Product.SUPPLIER_CHOICES)
+    supplier_data = (
+        Product.objects.annotate(
+            supplier_label=Coalesce("supplier_ref__name", "supplier")
+        )
+        .values("supplier_label")
+        .annotate(count=Count("id"))
+        .order_by("supplier_label")
+    )
+    counts_map = {
+        supplier_choice_map.get(item["supplier_label"], item["supplier_label"]): item["count"]
+        for item in supplier_data
+    }
+    # Ensure Suppliers with no products still show up with zero
+    for name in Supplier.objects.values_list("name", flat=True):
+        counts_map.setdefault(name, 0)
+
+    supplier_labels = list(counts_map.keys())
+    supplier_values = list(counts_map.values())
 
     # 3. Recent Withdrawals Trend (last 30 days)
     today = now().date()
@@ -37,10 +62,31 @@ def get_dashboard_data():
     top_products_labels = [item['product_name'] for item in top_withdrawn]
     top_products_counts = [float(item['total']) for item in top_withdrawn]
 
-    # 5. Purchase Orders Status
-    po_status = PurchaseOrder.objects.values('status').annotate(count=Count('id'))
-    po_status_labels = [item['status'] for item in po_status]
-    po_status_counts = [item['count'] for item in po_status]
+    # 5. Stock by Location
+    location_totals = {}
+    products_with_location = Product.objects.select_related("location").prefetch_related("items")
+    for product in products_with_location:
+        loc_name = product.location.name if product.location else "Unassigned"
+        total_stock = float(sum(item.current_stock for item in product.items.all()))
+        location_totals[loc_name] = location_totals.get(loc_name, 0) + total_stock
+
+    # If location tracking module is enabled, use detailed location stock
+    try:
+        from solutions.location_tracking.models import LocationStock
+
+        location_stock_rows = LocationStock.objects.select_related("location", "product_item", "product_item__product")
+        for row in location_stock_rows:
+            loc_name = row.location.name if row.location else "Unassigned"
+            location_totals[loc_name] = location_totals.get(loc_name, 0) + float(row.quantity)
+    except Exception:
+        pass
+
+    # Ensure all locations appear, even with zero tracked stock
+    for name in Location.objects.values_list("name", flat=True):
+        location_totals.setdefault(name, 0)
+
+    location_labels = list(location_totals.keys())
+    location_values = list(location_totals.values())
 
     # 6. Expiring Soon Table
     today_plus_15 = int((today + datetime.timedelta(days=15)).strftime("%s"))
@@ -54,14 +100,15 @@ def get_dashboard_data():
         'stock_labels': stock_labels,
         'stock_values': stock_values,
         'threshold_values': threshold_values,
+        'stock_names': stock_names,
         'supplier_labels': supplier_labels,
         'supplier_values': supplier_values,
         'withdrawal_dates': withdrawal_dates,
         'withdrawal_counts': withdrawal_counts,
         'top_products_labels': top_products_labels,
         'top_products_counts': top_products_counts,
-        'po_status_labels': po_status_labels,
-        'po_status_counts': po_status_counts,
+        'location_labels': location_labels,
+        'location_values': location_values,
         'expiring_soon': expiring_soon,
         'today_plus_15': today_plus_15,
         'today_plus_30': today_plus_30,
@@ -189,4 +236,4 @@ def inventory_analysis_forecasting(request):
         "selected_limit": selected_limit,
     }
 
-    return render(request, 'inventory/inventory_analysis_forecasting.html', context)
+    return render(request, 'analytics/inventory_analysis_forecasting.html', context)

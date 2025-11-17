@@ -1,4 +1,5 @@
 {% load static %}
+{% load custom_tags %}
 {% load feature_flags %}
 
 <!DOCTYPE html>
@@ -67,7 +68,7 @@
                 <tr>
                   <td>{{ p.product_code }}</td>
                   <td>{{ p.name }}</td>
-                  <td>{{ p.supplier }}</td>
+                  <td>{{ p.supplier_display }}</td>
                   <td>{{ p.threshold }}</td>
                   <td>{{ p.lead_time }}</td>
                 </tr>
@@ -121,6 +122,9 @@
                 <th>Lot Number</th>
                 <th>Expiry</th>
                 <th>Stock</th>
+                {% if location_tracking_enabled %}
+                  <th>Locations</th>
+                {% endif %}
                 <th>Units/Item</th>
                 <th>Partial Units</th>
                 <th>Type</th>
@@ -150,6 +154,23 @@
                   <td>{{ item.lot_number }}</td>
                   <td>{{ item.expiry_date|date:"F d, Y" }}</td>
                   <td>{{ item.current_stock }}</td>
+                  {% if location_tracking_enabled %}
+                    <td>
+                      {% with stocks=product.location_stocks %}
+                        {% if stocks %}
+                          <ul class="inline-list">
+                            {% for stock in stocks %}
+                              {% if stock.product_item_id == item.id %}
+                                <li>{{ stock.location.name }} ({{ stock.quantity }})</li>
+                              {% endif %}
+                            {% endfor %}
+                          </ul>
+                        {% else %}
+                          —
+                        {% endif %}
+                      {% endwith %}
+                    </td>
+                  {% endif %}
                   <td>{{ item.units_per_quantity }}</td>
                   <td>{{ item.accumulated_partial }}</td>
                   <td>{{ item.product_feature }}</td>

@@ -51,6 +51,14 @@ nav ul li a:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
+.user-banner {
+    margin-top: 10px;
+    text-align: center;
+    color: #fff;
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
 /* ======================== */
 /* Dashboard & Layout */
 /* ======================== */
@@ -119,6 +127,18 @@ th {
 
 tr:hover {
     background: #f1f1f1;
+}
+
+.inline-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.inline-list li {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 0.9rem;
 }
 
 /* ======================== */
@@ -923,4 +943,3 @@ body {
     max-width: 900px;
     margin: 0 auto 20px;
 }
-

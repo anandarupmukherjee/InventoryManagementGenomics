@@ -1,7 +1,6 @@
-from stock_control.module_loader import load_enabled_modules
+from stock_control.module_loader import module_flags as get_module_flags
+
 
 def module_flags(request):
-    enabled = load_enabled_modules()
-    return {
-        "flags": {module: True for module in enabled}
-    }
+    flags = get_module_flags()
+    return {"module_flags": flags, "flags": flags}

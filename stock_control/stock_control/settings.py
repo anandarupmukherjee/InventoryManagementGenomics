@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from django.conf import settings
-from stock_control.module_loader import load_enabled_modules
+from stock_control.module_loader import enabled_apps, load_enabled_modules
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,12 +21,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 
-ENABLED_MODULES = load_enabled_modules()
-MODULE_FLAGS = {
-    "analysis_enabled": "analysis" in ENABLED_MODULES,
-    "reporting_enabled": "reporting" in ENABLED_MODULES,
-    "user_interface_enabled": "user_interface" in ENABLED_MODULES,
-}
+MODULE_DEFINITIONS = load_enabled_modules()
+MODULE_FLAGS = {name: meta["enabled"] for name, meta in MODULE_DEFINITIONS.items()}
 
 
 # Quick-start development settings - unsuitable for production
@@ -52,14 +48,16 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 
-INSTALLED_APPS = [
+BASE_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'inventory',
+]
+
+INSTALLED_APPS = BASE_APPS + enabled_apps() + [
     'services.data_storage',
     'services.data_output',
 ]

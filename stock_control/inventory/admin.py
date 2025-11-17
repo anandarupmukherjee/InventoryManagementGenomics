@@ -3,7 +3,14 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 
-from services.data_storage.models import Product, ProductItem, Withdrawal, PurchaseOrder, Supplier
+from services.data_storage.models import (
+    Product,
+    ProductItem,
+    Withdrawal,
+    PurchaseOrder,
+    Supplier,
+    Location,
+)
 
 # ✅ Custom UserAdmin
 class CustomUserAdmin(BaseUserAdmin):
@@ -29,10 +36,18 @@ class SupplierAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name",)
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ("product_code", "name", "supplier", "threshold", "lead_time")
     search_fields = ("product_code", "name")
+    raw_id_fields = ("supplier_ref", "location")
 
 
 @admin.register(ProductItem)

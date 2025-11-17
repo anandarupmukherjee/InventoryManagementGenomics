@@ -23,6 +23,7 @@
             {% else %}
                 <p>You are not logged in.</p>
             {% endif %}
+            <a href="{% url 'inventory:help' %}" class="btn btn-secondary">Help &amp; User Guide</a>
         </div>
 
         <!-- Grid Container for Summary + Charts -->
@@ -40,10 +41,6 @@
                         <tr>
                             <td>Expired Lot Alerts</td>
                             <td><span class="status-indicator {% if has_expired_lot_alerts %}blinking-red{% else %}green{% endif %}"></span></td>
-                        </tr>
-                        <tr>
-                            <td>Delayed Delivery Alerts</td>
-                            <td><span class="status-indicator {% if has_delayed_delivery_alerts %}blinking-red{% else %}green{% endif %}"></span></td>
                         </tr>
                         <tr>
                             <td>Products Missing Threshold</td>
@@ -67,6 +64,14 @@
                             <td>Total Users Registered</td>
                             <td><strong>{{ total_users }}</strong></td>
                         </tr>
+                        <tr>
+                            <td>Total Locations</td>
+                            <td><strong>{{ total_locations }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Total Unique Products</td>
+                            <td><strong>{{ total_products }}</strong></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -85,7 +90,7 @@
                 {% include 'inventory/base_charts/top_withdrawn_chart.html' %}
             </div>
             <div class="dashboard-card">
-                {% include 'inventory/base_charts/po_status_chart.html' %}
+                {% include 'inventory/base_charts/location_distribution_chart.html' %}
             </div>
 
         </div> <!-- end .dashboard-grid -->

@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils.timezone import make_aware
 from openpyxl import Workbook
+from django.utils.timezone import now
 
 from services.data_storage.models import Product, Withdrawal, PurchaseOrder  # Adjust as needed
 
@@ -54,28 +55,20 @@ def download_report(request):
 
     # Handle Excel or CSV download
     if download_type in ['excel', 'csv']:
+        model_class = preview_model_class
+        fields = preview_fields
+        qs = preview_queryset
+
+        # Build filename
+        user_part = request.user.username if request.user.is_authenticated else "anonymous"
+        date_part = now().strftime("%Y%m%d")
+
         if download_type == 'excel':
             wb = Workbook()
-            for model_name, model_path in MODEL_MAP.items():
-                model_class = apps.get_model(*model_path.split('.'))
-                fields = [f.name for f in model_class._meta.fields]
-                qs = model_class.objects.all()
-
-                if model_name in FILTER_FIELDS:
-                    date_field = FILTER_FIELDS[model_name]
-                    if start_date:
-                        qs = qs.filter(
-                            **{f"{date_field}__gte": make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))}
-                        )
-                    if end_date:
-                        qs = qs.filter(
-                            **{f"{date_field}__lte": make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d"))}
-                        )
-
-                ws = wb.create_sheet(title=model_name)
-                ws.append(fields)
-                for obj in qs:
-                    ws.append([str(getattr(obj, field, '')) for field in fields])
+            ws = wb.create_sheet(title=selected_model)
+            ws.append(fields)
+            for obj in qs:
+                ws.append([str(getattr(obj, field, '')) for field in fields])
 
             # Remove the default sheet
             if "Sheet" in wb.sheetnames:
@@ -85,42 +78,22 @@ def download_report(request):
             wb.save(out)
             out.seek(0)
             response = HttpResponse(out, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = 'attachment; filename=inventory_report.xlsx'
+            response['Content-Disposition'] = f'attachment; filename=IMS_{user_part}_{date_part}.xlsx'
             return response
 
         elif download_type == 'csv':
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
-                for model_name, model_path in MODEL_MAP.items():
-                    model_class = apps.get_model(*model_path.split('.'))
-                    fields = [f.name for f in model_class._meta.fields]
-                    qs = model_class.objects.all()
+            csv_buffer = io.StringIO()
+            writer = csv.writer(csv_buffer)
+            writer.writerow(fields)
+            for obj in qs:
+                writer.writerow([str(getattr(obj, field, '')) for field in fields])
 
-                    if model_name in FILTER_FIELDS:
-                        date_field = FILTER_FIELDS[model_name]
-                        if start_date:
-                            qs = qs.filter(
-                                **{f"{date_field}__gte": make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))}
-                            )
-                        if end_date:
-                            qs = qs.filter(
-                                **{f"{date_field}__lte": make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d"))}
-                            )
-
-                    csv_buffer = io.StringIO()
-                    writer = csv.writer(csv_buffer)
-                    writer.writerow(fields)
-                    for obj in qs:
-                        writer.writerow([str(getattr(obj, field, '')) for field in fields])
-
-                    zip_file.writestr(f"{model_name}.csv", csv_buffer.getvalue())
-
-            zip_buffer.seek(0)
-            response = HttpResponse(zip_buffer, content_type='application/zip')
-            response['Content-Disposition'] = 'attachment; filename=inventory_report.zip'
+            csv_buffer.seek(0)
+            response = HttpResponse(csv_buffer.getvalue(), content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename=IMS_{user_part}_{date_part}.csv'
             return response
 
-    return render(request, 'inventory/download_report.html', {
+    return render(request, 'analytics/download_report.html', {
         'models': MODEL_MAP.keys(),
         'selected_model': selected_model,
         'fields': preview_fields,

@@ -43,30 +43,7 @@
 </head>
 <body>
 
-<!-- Navigation -->
-<nav>
-  <ul>
-    <li><a href="{% url 'inventory:dashboard' %}">Dashboard</a></li>
-    <li><a href="{% url 'inventory:create_withdrawal' %}">User Withdrawal</a></li>
-    <li><a href="{% url 'inventory:product_list' %}" class="active">Product List</a></li>
-    {% if user.is_staff %}
-      <li><a href="/admin/">Database Admin Panel</a></li>
-      <li><a href="{% url 'inventory:stock_admin' %}">Stock Admin</a></li>
-      <li><a href="{% url 'inventory:track_withdrawals' %}">Track Withdrawals</a></li>
-      <li><a href="{% url 'inventory:record_purchase_order' %}">Record PO</a></li>
-      <li><a href="{% url 'inventory:track_purchase_orders' %}">Track PO</a></li>
-      <li><a href="{% url 'inventory:download_report' %}" class="active">Report</a></li>
-      <li><a href="{% url 'inventory:manage_users' %}">Manage Users</a></li>
-      <li><a href="{% url 'inventory:register_user' %}">Register User</a></li>
-    {% endif %}
-    {% if user.is_authenticated %}
-      <li><a href="{% url 'logout' %}">Logout</a></li>
-    {% else %}
-      <li><a href="{% url 'login' %}">Login</a></li>
-      <li><a href="{% url 'inventory:register' %}">Register</a></li>
-    {% endif %}
-  </ul>
-</nav>
+{% include "includes/navbar.html" %}
 
 <!-- Page -->
 <div class="dashboard-container" style="display: flex; gap: 20px; align-items: flex-start;">

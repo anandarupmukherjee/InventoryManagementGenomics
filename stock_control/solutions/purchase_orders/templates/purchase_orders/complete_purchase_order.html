@@ -8,12 +8,7 @@
   <script src="{% static 'inventory/po_completion.js' %}" defer></script>
 </head>
 <body>
-  <nav>
-    <ul>
-      <li><a href="{% url 'inventory:dashboard' %}">Dashboard</a></li>
-      <li><a href="{% url 'inventory:track_purchase_orders' %}">Track PO</a></li>
-    </ul>
-  </nav>
+  {% include "includes/navbar.html" %}
 
   <div class="dashboard-container">
     <div class="card form-card">
@@ -45,7 +40,6 @@
         <fieldset>
           <legend>Delivery Info</legend>
           <div>{{ form.quantity_ordered.label_tag }} {{ form.quantity_ordered }}</div>
-          <div>{{ form.expected_delivery.label_tag }} {{ form.expected_delivery }}</div>
           <div>{{ form.status.label_tag }} {{ form.status }}</div>
         </fieldset>
 

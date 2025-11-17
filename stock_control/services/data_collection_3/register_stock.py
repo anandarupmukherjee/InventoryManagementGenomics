@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from inventory.access_control import group_required
 from services.data_collection.data_collection import parse_barcode_data
 from services.data_storage.models import Product, StockRegistration
+from services.data_storage.models import ProductItem
 
 
 @login_required
@@ -72,15 +73,18 @@ def register_stock(request):
             item_qs = item_qs.filter(expiry_date=expiry_date)
 
         item = item_qs.order_by("-expiry_date").first()
-
-        if not item:
-            messages.error(
-                request,
-                "No product item matches the scanned details. Add the lot in Stock Admin before registering stock.",
-            )
-            return redirect("data_collection_3:register_stock")
+        created_new_item = False
 
         with transaction.atomic():
+            if not item:
+                # Auto-create a product item/lot when the scanned details are new.
+                item = ProductItem.objects.create(
+                    product=product,
+                    lot_number=lot_number or "LOT000",
+                    expiry_date=expiry_date or datetime.date.today(),
+                )
+                created_new_item = True
+
             item.current_stock = F("current_stock") + 1
             item.save(update_fields=["current_stock"])
             item.refresh_from_db(fields=["current_stock"])
@@ -93,6 +97,9 @@ def register_stock(request):
                 lot_number=lot_number or item.lot_number,
                 expiry_date=expiry_date or item.expiry_date,
             )
+
+        if created_new_item:
+            messages.info(request, f"Created new lot {item.lot_number} for {product.name}.")
 
         messages.success(
             request,

@@ -8,22 +8,19 @@
 </head>
 <body>
 
-    <!-- Navigation Bar / Menu -->
-    <nav>
-        <ul>
-            <li><a href="{% url 'inventory:dashboard' %}">Home</a></li>
-        </ul>
-    </nav>
+    {% include "includes/navbar.html" %}
 
-    <h1>Register New User</h1>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Create User</button>
-    </form>
-
-    <a href="{% url 'inventory:manage_users' %}">Back to Users</a>
-    
+    <div class="dashboard-container">
+        <div class="card form-card">
+            <h1>Register New User</h1>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </form>
+            <a href="{% url 'inventory:manage_users' %}" class="btn btn-secondary">Back to Users</a>
+        </div>
+    </div>
 
 </body>
 </html>

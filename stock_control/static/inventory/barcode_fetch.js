@@ -22,17 +22,19 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("parsed_lot_number").value = data.lot_number || "";
             document.getElementById("parsed_expiry_date").value = data.expiry_date || "";
 
-            // ✅ ADD THESE LINES:
-            // document.getElementById("lot_number_field").value = data.lot_number || "";
-            // document.getElementById("expiry_date_field").value = data.expiry_date || "";
+            document.getElementById("lot_number_field").value = data.lot_number || "";
+            document.getElementById("expiry_date_field").value = data.expiry_date || "";
+            document.getElementById("parsed_product_code_hidden").value = data.raw_product_code || data.product_code || "";
 
             // Step 3: Fetch and populate full product details
-            if (data.product_code) {
+            const candidates = [data.raw_product_code, data.product_code, data.normalized_product_code].filter(Boolean);
+
+            for (const code of candidates) {
                 try {
-                    const productResponse = await fetch(`/data/get-product-by-barcode/?barcode=${data.product_code}`);
+                    const productResponse = await fetch(`/data/get-product-by-barcode/?barcode=${code}`);
                     if (!productResponse.ok) {
-                        console.warn("⚠️ Product not found for code:", data.product_code);
-                        return;
+                        console.warn("⚠️ Product not found for code:", code);
+                        continue;
                     }
 
                     const product = await productResponse.json();
@@ -49,6 +51,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else if (volumeSection) {
                         volumeSection.style.display = "none";
                     }
+                    break;
                 } catch (fetchErr) {
                     console.error("❌ Failed to fetch product details:", fetchErr);
                 }

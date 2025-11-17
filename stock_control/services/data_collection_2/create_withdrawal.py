@@ -4,6 +4,20 @@ import datetime
 
 from services.data_storage.models import Product, ProductItem, Withdrawal
 from inventory.forms import WithdrawalForm
+from services.data_collection.data_collection import parse_barcode_data
+
+
+def _candidate_codes(*values):
+    seen = []
+    for value in values:
+        if not value:
+            continue
+        if value not in seen:
+            seen.append(value)
+        stripped = value.lstrip("0")
+        if stripped and stripped != value and stripped not in seen:
+            seen.append(stripped)
+    return seen
 
 
 def create_withdrawal(request):
@@ -20,34 +34,54 @@ def create_withdrawal(request):
                 request.POST.get("barcode_manual")
             )
             product_dropdown = request.POST.get("product_dropdown")
-            lot_number = request.POST.get("lot_number")
-            expiry_date = request.POST.get("expiry_date")
-
-            # ✅ Convert expiry if in DD.MM.YYYY format
-            if expiry_date and '.' in expiry_date:
-                try:
-                    expiry_date = datetime.datetime.strptime(expiry_date, "%d.%m.%Y").date()
-                except ValueError:
-                    expiry_date = None  # fallback
+            lot_number = (request.POST.get("lot_number") or "").strip()
+            expiry_date_raw = (request.POST.get("expiry_date") or "").strip()
 
             print("🔍 DEBUG Withdrawal:")
             print("Product code:", barcode)
             print("Lot:", lot_number)
-            print("Expiry:", expiry_date)
+            print("Expiry (raw):", expiry_date_raw)
             print("Dropdown:", product_dropdown)
 
             # ✅ Lookup product item
             item = None
             if product_dropdown:
                 product = Product.objects.filter(id=product_dropdown).first()
-                item = ProductItem.objects.filter(product=product).order_by('-expiry_date').first()
+                item = (
+                    ProductItem.objects.filter(product=product, current_stock__gt=0)
+                    .order_by('-expiry_date')
+                    .first()
+                )
             else:
                 # Validate lot_number and expiry_date before querying
                 # Normalize barcode
-                normalized_code = barcode.lstrip("0") if barcode else ""
+                barcode_data = parse_barcode_data(barcode) if barcode else None
+                code_candidates = _candidate_codes(
+                    request.POST.get("product_code_from_barcode"),
+                    barcode_data.get("raw_product_code") if barcode_data else None,
+                    barcode_data.get("product_code") if barcode_data else None,
+                    barcode_data.get("normalized_product_code") if barcode_data else None,
+                    barcode,
+                )
 
                 # Start with matching product
-                product = Product.objects.filter(product_code__iexact=normalized_code).first()
+                product = None
+                for candidate in code_candidates or []:
+                    product = Product.objects.filter(product_code__iexact=candidate).first()
+                    if product:
+                        break
+
+                expiry_date_obj = None
+                if expiry_date_raw:
+                    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+                        try:
+                            expiry_date_obj = datetime.datetime.strptime(expiry_date_raw, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+
+                if expiry_date_obj:
+                    print("Expiry (parsed):", expiry_date_obj)
 
                 if product:
                     item_qs = ProductItem.objects.filter(product=product)
@@ -55,16 +89,8 @@ def create_withdrawal(request):
                     if lot_number:
                         item_qs = item_qs.filter(lot_number__iexact=lot_number.strip())
 
-                    if expiry_date:
-                        try:
-                            if '.' in expiry_date:
-                                expiry_date_obj = datetime.datetime.strptime(expiry_date, "%d.%m.%Y").date()
-                            else:
-                                expiry_date_obj = datetime.datetime.strptime(expiry_date, "%Y-%m-%d").date()
-
-                            item_qs = item_qs.filter(expiry_date=expiry_date_obj)
-                        except ValueError:
-                            pass  # Ignore if can't parse
+                    if expiry_date_obj:
+                        item_qs = item_qs.filter(expiry_date=expiry_date_obj)
 
                     item = item_qs.first()
 
@@ -114,5 +140,5 @@ def create_withdrawal(request):
     else:
         form = WithdrawalForm()
 
-    products = Product.objects.all()
+    products = Product.objects.filter(items__current_stock__gt=0).distinct().order_by("name")
     return render(request, 'inventory/create_withdrawal.html', {'form': form, 'products': products})
