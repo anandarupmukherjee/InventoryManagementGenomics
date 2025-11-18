@@ -16,12 +16,13 @@ from services.data_storage.models import ProductItem
 @group_required(["Inventory Manager"])
 def register_stock(request):
     recent_registrations = StockRegistration.objects.select_related("product_item", "user").order_by("-timestamp")[:10]
+    register_messages = [m for m in messages.get_messages(request) if "register_stock" in m.tags]
 
     if request.method == "POST":
         raw_barcode = (request.POST.get("barcode") or "").strip()
 
         if not raw_barcode:
-            messages.error(request, "Scan a barcode to register stock.")
+            messages.error(request, "Scan a barcode to register stock.", extra_tags="register_stock")
             return redirect("data_collection_3:register_stock")
 
         parsed = parse_barcode_data(raw_barcode)
@@ -63,7 +64,7 @@ def register_stock(request):
                 break
 
         if not product:
-            messages.error(request, "No product matches the scanned barcode.")
+            messages.error(request, "No product matches the scanned barcode.", extra_tags="register_stock")
             return redirect("data_collection_3:register_stock")
 
         item_qs = product.items.all()
@@ -99,11 +100,16 @@ def register_stock(request):
             )
 
         if created_new_item:
-            messages.info(request, f"Created new lot {item.lot_number} for {product.name}.")
+            messages.info(
+                request,
+                f"Created new lot {item.lot_number} for {product.name}.",
+                extra_tags="register_stock",
+            )
 
         messages.success(
             request,
             f"Registered stock for {item.product.name} (Lot {item.lot_number}). Current stock: {item.current_stock}.",
+            extra_tags="register_stock",
         )
         return redirect("data_collection_3:register_stock")
 
@@ -112,5 +118,6 @@ def register_stock(request):
         "inventory/register_stock.html",
         {
             "recent_registrations": recent_registrations,
+            "register_messages": register_messages,
         },
     )

@@ -149,6 +149,7 @@ form {
     padding: 20px;
     border-radius: 8px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
@@ -179,6 +180,8 @@ button, .btn {
     margin-top: 10px;
     display: inline-block;
     text-align: center;
+    background: #007bff;
+    color: white;
 }
 
 .btn-primary {
@@ -191,12 +194,12 @@ button, .btn {
 }
 
 .btn-secondary {
-    background: #6c757d;
+    background: #007bff;
     color: white;
 }
 
 .btn-secondary:hover {
-    background: #545b62;
+    background: #0056b3;
 }
 
 .btn-danger {
@@ -494,6 +497,8 @@ body {
     cursor: pointer;
     transition: 0.3s ease-in-out;
     margin-top: 10px;
+    background: #007bff;
+    color: white;
   }
   
   .btn-primary {
@@ -506,12 +511,12 @@ body {
   }
   
   .btn-secondary {
-    background: #6c757d;
+    background: #007bff;
     color: white;
   }
   
   .btn-secondary:hover {
-    background: #545b62;
+    background: #0056b3;
   }
   
   .btn-danger {
@@ -681,34 +686,42 @@ body {
   /* ======================== */
 /* Stock Admin Card Layout */
 /* ======================== */
-.table-card-wrapper {
-    display: flex;
-    gap: 20px;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: nowrap;
-    width: 100%;
-  }
-  
-  .table-card-wrapper .wide-card {
-    flex: 1.5 1 0;
-    min-width: 400px;
-  }
-  
-  .table-card-wrapper .narrow-card {
-    flex: 1 1 0;
-    min-width: 300px;
-  }
-  
-  
-  .table-card-wrapper .card {
-    flex: 1 1 32%;
-    min-width: 300px;
-    max-height: 1000px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  .table-card-wrapper {
+      display: flex;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: nowrap;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .table-card-wrapper .wide-card {
+      flex: 2 1 0;
+      min-width: 420px;
+      max-width: 66%;
+    }
+    
+    .table-card-wrapper .narrow-card {
+      flex: 1 1 0;
+      min-width: 320px;
+      max-width: 34%;
+    }
+    
+    /* Keep form content contained within its card */
+    .table-card-wrapper .narrow-card form {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .table-card-wrapper .card {
+      flex: 1 1 32%;
+      min-width: 300px;
+      max-height: 1000px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
   
   /* Make inner content scrollable */
   .table-card-wrapper .table-wrapper {
@@ -942,4 +955,61 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     max-width: 900px;
     margin: 0 auto 20px;
+}
+
+.stock-admin-container {
+    width: 90vw;
+    max-width: 90vw;
+    margin: 100px auto 20px;
+    padding: 0;
+}
+
+.location-tracking-container {
+    width: 90vw;
+    max-width: 90vw;
+    margin: 100px auto 20px;
+    padding: 0;
+}
+
+.location-actions-card {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.location-actions-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.location-actions-card .action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.location-actions-card .action-buttons .btn {
+    background: #007bff;
+    color: #fff;
+    border: none;
+}
+
+.location-actions-card .action-buttons .btn:hover {
+    background: #0056b3;
+}
+
+.product-list-container {
+    width: 100%;
+    margin: 100px auto 20px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.product-list-container .table-card {
+    width: 90vw;
+    max-width: 90vw;
 }

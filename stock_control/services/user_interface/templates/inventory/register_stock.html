@@ -17,10 +17,10 @@
       <h1>Register Stock</h1>
       <p>Scan barcodes to increment the corresponding product item by one unit.</p>
 
-      {% if messages %}
+      {% if register_messages %}
         <div class="messages">
           <ul>
-            {% for message in messages %}
+            {% for message in register_messages %}
               <li class="{{ message.tags }}">{{ message }}</li>
             {% endfor %}
           </ul>
